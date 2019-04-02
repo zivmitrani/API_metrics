@@ -135,7 +135,7 @@ toturial: https://prometheus.io/docs/guides/cadvisor/
 
 
  `docker-compose up -d`  - will create all containers (services) -d run containers in the background.
- `docker-compose down` - wiil stop and remove all the containers he was created.
+ `docker-compose down` - will stop and remove all the containers he created.
 
 
 
