@@ -59,7 +59,7 @@ Version it's the Compose file format, Compose refers to each container as a serv
    ports:
      - 8000:8000
 ```
-This service use the image I created of  the API server and create a new container named node-api, 
+This service use the image I created of the API server and create a new container named node-api, 
 exposed on port 8000 outside and also in the container.
 
 ```
@@ -71,7 +71,19 @@ exposed on port 8000 outside and also in the container.
    depends_on:
      - node_api
 ```
+I used this tutorial: https://prometheus.io/docs/prometheus/latest/installation/
+to create a custom image of prometheus, to avoid managing a file on the host and bind-mount it.
+First I created a prometheus.yml that scrapes 2 metrics targets (api_metrics and cAdvisor)
+you can see it on [API_metrics/prom/prometheus.yml](API_metrics/prom/prometheus.yml).
+Then run those commands:
 
+`docker build -t my-prom .
+docker run -p 9090:9090 my-prom`
+and I have a custom prometheus image, create a new container named prometheus, 
+exposed on port 9090 outside and also in the container.
+depends_on means that the prometheus service will wait until the node_api service will created. 
+
+```
   grafana:
    image: my-grafana
    container_name: grafana
@@ -83,8 +95,24 @@ exposed on port 8000 outside and also in the container.
      - /home/ziv/project/grafana/dashboards:/var/lib/grafana/dashboards
    depends_on:
      - prometheus
+```
+I used this toturials for Run grafana as a container: https://medium.com/@salohyprivat/prometheus-and-grafana-d59f3b1ded8b
 
+first I need to build a custom docker image of grafana and include my grafana.ini file using volume:
+` docker run -d --name=grafana -v /home/ziv/grafana/grafana.ini:/etc/grafana/grafana.ini -v /home/ziv/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml -p 3000:3000 grafana/grafana
+`
+After I had this Grafana image, in docker compose file I used 3 volumes:
+1. `/home/ziv/project/grafana/provisioning/datasource/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml ` defines the datasource of grafana to Prometheus, you can see it on [API_metrics/grafana/provisioning/datasource/datasource.yml ](API_metrics/grafana/provisioning/datasource/datasource.yml). 
+2. `/home/ziv/project/grafana/provisioning/dashboards/all.yml:/etc/grafana/provisioning/dashboards/all.yml`  defines from where to load dashborads, you can see it on [API_metrics/grafana/provisioning/dashboards/all.yml (API_metrics/grafana/provisioning/dashboards/all.yml)
 
+3. `/home/ziv/project/grafana/dashboards:/var/lib/grafana/dashboards` - copy my 2 dashboards to the grafana container.
+
+ provisioning & dashboards toturials that I used:
+- http://docs.grafana.org/administration/provisioning/
+- https://56k.cloud/blog/provisioning-grafana-datasources-and-dashboards-automagically/
+- https://ops.tips/blog/initialize-grafana-with-preconfigured-dashboards/
+
+```
   cadvisor:
     image: google/cadvisor:latest
     container_name: cadvisor
@@ -97,29 +125,20 @@ exposed on port 8000 outside and also in the container.
       - /var/lib/docker/:/var/lib/docker:ro
     depends_on:
       - node_api
-
-
- `docker-compose up -d`
-
-
-
-###### Prometheus
- promethus.yml & dockerfile explaintion
- 
-###### cAdvisor:
-provides container users an understanding of the resource usage and performance characteristics of their running containers.
-documentation I used for:
+```
+cAdvisor provides running containers monitoring.
+I used the official image and create a container named cadvisor, exposed on 8080 port outside and also in the container.
+he used volumes from my host server to get an information about the performance characteristics of the runnig containers on my server.
+I used those documentatuons:
 repo: https://github.com/google/cadvisor
 toturial: https://prometheus.io/docs/guides/cadvisor/
 
-###### Grafana:
-- provisioning
-- running as a container
-- dashboards
 
-_Run grafana as a container:_
-first we need to build a docker image 
-`docker run -d --name=grafana  -v /YourFolder/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml -p 3000:3000 my-grafana`
+ `docker-compose up -d`  - will create all containers (services) -d run containers in the background.
+ `docker-compose down` - wiil stop and remove all the containers he was created.
+
+
+
 
 
 
